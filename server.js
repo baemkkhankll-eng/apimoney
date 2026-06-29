@@ -60,6 +60,24 @@ function saveBalance() {
 
 // API Routes
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({
+    name: 'TrueMoney Wallet Top-up API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/api/health',
+      balance: '/api/balance',
+      create_topup: '/api/topup (POST)',
+      transaction_status: '/api/topup/:id',
+      transactions: '/api/transactions',
+      reset: '/api/reset (POST)'
+    },
+    documentation: 'See README.md for usage examples'
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Top-up API is running' });
