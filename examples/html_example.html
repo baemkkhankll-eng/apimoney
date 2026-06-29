@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrueMoney Top-up API Example</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            display: none;
+        }
+        
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .result h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .result pre {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        
+        .balance-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #e7f3ff;
+            border-radius: 8px;
+            border: 1px solid #b8daff;
+        }
+        
+        .balance-section h3 {
+            color: #004085;
+            margin-bottom: 10px;
+        }
+        
+        .balance-amount {
+            font-size: 32px;
+            font-weight: bold;
+            color: #004085;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎁 TrueMoney Top-up API</h1>
+        <p class="subtitle">ตัวอย่างการใช้งาน API เติมเงินด้วยซองอังเปา</p>
+        
+        <div class="balance-section">
+            <h3>💰 ยอดเงินคงเหลือ</h3>
+            <div class="balance-amount">฿<span id="balance">0.00</span></div>
+        </div>
+        
+        <form id="topupForm">
+            <div class="form-group">
+                <label for="angpaoLink">ลิงก์ซองอังเปา (TrueMoney)</label>
+                <input 
+                    type="url" 
+                    id="angpaoLink" 
+                    placeholder="https://gift.truemoney.com/campaign/?v=..."
+                    required
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="phoneNumber">เบอร์โทรศัพท์</label>
+                <input 
+                    type="tel" 
+                    id="phoneNumber" 
+                    placeholder="0812345678"
+                    pattern="0[689]\d{8}"
+                    required
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="amount">จำนวนเงิน (บาท) - ไม่บังคับ</label>
+                <input 
+                    type="number" 
+                    id="amount" 
+                    placeholder="100"
+                    min="1"
+                >
+            </div>
+            
+            <button type="submit" id="submitBtn">
+                <span id="btnText">เติมเงิน</span>
+            </button>
+        </form>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3002';
+        
+        // โหลดยอดเงินเมื่อเริ่ม
+        loadBalance();
+        
+        async function loadBalance() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/balance`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('balance').textContent = data.balance.toFixed(2);
+                }
+            } catch (error) {
+                console.error('Error loading balance:', error);
+            }
+        }
+        
+        document.getElementById('topupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const angpaoLink = document.getElementById('angpaoLink').value;
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const amount = document.getElementById('amount').value;
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            const resultDiv = document.getElementById('result');
+            
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            btnText.innerHTML = '<span class="loading"></span>กำลังดำเนินการ...';
+            resultDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/topup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        angpao_link: angpaoLink,
+                        phone_number: phoneNumber,
+                        amount: amount ? parseInt(amount) : null
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Show result
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result ' + (data.success ? 'success' : 'error');
+                resultDiv.innerHTML = `
+                    <h3>${data.success ? '✅ สำเร็จ' : '❌ ไม่สำเร็จ'}</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                // If successful, update balance and check status
+                if (data.success) {
+                    const transactionId = data.transaction.id;
+                    
+                    // Check status after 4 seconds
+                    setTimeout(async () => {
+                        try {
+                            const statusResponse = await fetch(`${API_BASE_URL}/api/topup/${transactionId}`);
+                            const statusData = await statusResponse.json();
+                            
+                            resultDiv.innerHTML = `
+                                <h3>📊 สถานะรายการ</h3>
+                                <pre>${JSON.stringify(statusData, null, 2)}</pre>
+                            `;
+                            
+                            // Reload balance
+                            loadBalance();
+                        } catch (error) {
+                            console.error('Error checking status:', error);
+                        }
+                    }, 4000);
+                }
+                
+            } catch (error) {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h3>❌ เกิดข้อผิดพลาด</h3>
+                    <pre>${error.message}</pre>
+                `;
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                btnText.textContent = 'เติมเงิน';
+            }
+        });
+    </script>
+</body>
+</html>

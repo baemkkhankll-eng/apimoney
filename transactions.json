@@ -1,0 +1,11 @@
+[
+  {
+    "id": "TXN1782699407073I60UDSB1D",
+    "angpao_link": "https://gift.truemoney.com/campaign/?v=test",
+    "phone_number": "0812345678",
+    "amount": 100,
+    "status": "completed",
+    "created_at": "2026-06-29T02:16:47.074Z",
+    "updated_at": "2026-06-29T02:16:50.091Z"
+  }
+]
